@@ -27,7 +27,7 @@ def procesar_chunk(datos_chunk):
 
     for existencia_origen in datos_chunk:
         codprod_origen = existencia_origen.codprod
-        codsede_origen = 2
+        codsede_origen = 1
         hash_fuente = calcular_hash(existencia_origen)
 
         existencia_destino = sync_manager.obtener_existencia_destino(session_destino, codprod_origen, codsede_origen)

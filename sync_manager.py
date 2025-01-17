@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime
+
 from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import sessionmaker
 
@@ -31,33 +33,41 @@ class SyncManager:
         """Obtiene un producto de la base de datos destino"""
         return session_destino.query(Producto).filter(Producto.codprod == codprod_origen).first()
 
-    def actualizar_producto(self, session_destino, producto_destino, producto_origen, hash_fuente):
-        """Actualiza un producto en la base de datos destino"""
-        logging.info(f"El producto {producto_origen.codprod} ha cambiado. Actualizando...")
-        producto_destino.nombre = producto_origen.nombre
-        producto_destino.precio = producto_origen.precio
-        producto_destino.stock = producto_origen.stock
-        producto_destino.pactivo = producto_origen.pactivo
-        producto_destino.codmarca = 1  # Asumimos un valor estático
-        producto_destino.hash = hash_fuente
+    def actualizar_productos_batch(self, session_destino, productos_batch):
+        """
+        Actualiza un lote de productos en la base de datos destino.
+        """
+        logging.info("Actualizando lote de productos...")
+        for producto_destino, producto_origen, hash_fuente in productos_batch:
+            producto_destino.nombre = producto_origen.nombre
+            producto_destino.precio = producto_origen.precio
+            producto_destino.stock = producto_origen.stock
+            producto_destino.pactivo = producto_origen.pactivo
+            producto_destino.codmarca = producto_origen.codmarca
+            producto_destino.hash = hash_fuente
         session_destino.commit()
 
-    def insertar_nuevo_producto(self, session_destino, producto_origen, hash_fuente):
-        """Inserta un nuevo producto en la base de datos destino"""
-        logging.info(f"Producto {producto_origen.codprod} no encontrado en destino. Insertando nuevo producto...")
-        nuevo_producto = Producto(
-            codprod=producto_origen.codprod,
-            nombre=producto_origen.nombre,
-            precio=producto_origen.precio,
-            stock=producto_origen.stock,
-            pactivo=producto_origen.pactivo,
-            codmarca=1,
-            created_at="2024-11-18 13:59:37",
-            updated_at="2024-11-18 13:59:37",
-            codbarra01=producto_origen.CODBARRA01,
-            hash=hash_fuente
-        )
-        session_destino.add(nuevo_producto)
+    def insertar_productos_batch(self, session_destino, productos_batch):
+        """
+        Inserta un lote de nuevos productos en la base de datos destino.
+        """
+        logging.info("Insertando lote de nuevos productos...")
+        nuevos_productos = []
+        for producto_origen, hash_fuente in productos_batch:
+            nuevo_producto = Producto(
+                codprod=producto_origen.codprod,
+                nombre=producto_origen.nombre,
+                precio=producto_origen.precio,
+                stock=producto_origen.stock,
+                pactivo=producto_origen.pactivo,
+                codmarca=1,
+                hash=hash_fuente,
+                created_at=datetime.now(),
+                updated_at=datetime.now(),
+                codbarra01=producto_origen.codbarra01
+            )
+            nuevos_productos.append(nuevo_producto)
+        session_destino.bulk_save_objects(nuevos_productos)
         session_destino.commit()
 
     def obtener_existencias_origen(self, session_fuente):
@@ -206,7 +216,7 @@ FROM (
         for existencia_origen, hash_fuente in existencias_batch:
             nueva_existencia = ExistenciaSede(
                 product_codprod=existencia_origen.codprod,
-                codsede=2,
+                codsede=1,
                 existencia=existencia_origen.stock,
                 precio_original=existencia_origen.precio_original,
                 precio_final=existencia_origen.precio_final,
