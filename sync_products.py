@@ -2,7 +2,6 @@ import logging
 from tqdm import tqdm
 from config import FUENTE_URL, DESTINO_URL
 from sync_manager import SyncManager
-from producto_origen import ProductoOrigen
 import hashlib
 
 def calcular_hash(producto_origen):
